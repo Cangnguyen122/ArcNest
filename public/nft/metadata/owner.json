@@ -1,0 +1,11 @@
+{
+  "name": "ArcNest Arc Pass - Owner",
+  "description": "Owner access pass for ArcNest Arc House, founder-level platform authority, and future holder utilities.",
+  "image": "/nft/images/dogecord-owner.png",
+  "attributes": [
+    { "trait_type": "Platform", "value": "ArcNest" },
+    { "trait_type": "House", "value": "Arc House" },
+    { "trait_type": "Role", "value": "Owner" },
+    { "trait_type": "Access", "value": "Platform Owner" }
+  ]
+}

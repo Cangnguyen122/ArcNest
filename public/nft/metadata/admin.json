@@ -1,0 +1,11 @@
+{
+  "name": "ArcNest Arc Pass - Admin",
+  "description": "Admin access pass for ArcNest Arc House, elevated platform privileges, community operations, and future holder utilities.",
+  "image": "/nft/images/dogecord-admin.png",
+  "attributes": [
+    { "trait_type": "Platform", "value": "ArcNest" },
+    { "trait_type": "House", "value": "Arc House" },
+    { "trait_type": "Role", "value": "Admin" },
+    { "trait_type": "Access", "value": "Platform Admin" }
+  ]
+}

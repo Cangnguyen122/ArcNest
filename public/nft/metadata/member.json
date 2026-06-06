@@ -1,0 +1,11 @@
+{
+  "name": "ArcNest Arc Pass - Member",
+  "description": "Member access pass for ArcNest Arc House, personal servers, NFT-gated invites, and future holder utilities.",
+  "image": "/nft/images/dogecord-member.png",
+  "attributes": [
+    { "trait_type": "Platform", "value": "ArcNest" },
+    { "trait_type": "House", "value": "Arc House" },
+    { "trait_type": "Role", "value": "Member" },
+    { "trait_type": "Access", "value": "Holder" }
+  ]
+}

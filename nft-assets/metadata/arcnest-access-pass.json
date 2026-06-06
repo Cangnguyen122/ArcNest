@@ -1,0 +1,28 @@
+{
+  "name": "ArcNest Access Pass",
+  "description": "ArcNest Access Pass is a Web3 social gateway pass for entering Arc House, verified community spaces, and future ArcNest experiences.",
+  "image": "ipfs://bafybeihwfgj7qdqzem45sdf5v4wyjhcvyig7v3edgmk42kfxiljunvgieq/arcnest-access-pass.png",
+  "external_url": "https://arcnest.xyz",
+  "attributes": [
+    {
+      "trait_type": "Project",
+      "value": "ArcNest"
+    },
+    {
+      "trait_type": "Network",
+      "value": "Arc Testnet"
+    },
+    {
+      "trait_type": "Pass Type",
+      "value": "Access Pass"
+    },
+    {
+      "trait_type": "Membership",
+      "value": "Member"
+    },
+    {
+      "trait_type": "Access",
+      "value": "Arc House"
+    }
+  ]
+}

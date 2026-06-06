@@ -1,0 +1,368 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id                          String               @id @default(uuid())
+  userId                      String               @unique
+  primaryWalletAddress        String?
+  primaryWalletAddressLower   String?
+  accessStatus                AccessStatus         @default(ACTIVE)
+  name                        String
+  imageUrl                    String
+  createdAt                   DateTime             @default(now())
+  updatedAt                   DateTime             @updatedAt
+  bio                         String               @default("")
+  lastSeenAt                  DateTime?
+  accessPasses                AccessPass[]
+  channels                    Channel[]
+  members                     Member[]
+  payments                    Payment[]
+  privateRoomAccesses         PrivateRoomAccess[]
+  privateRoomInvitesCreated   PrivateRoomInvite[]  @relation("PrivateRoomInviteCreator")
+  privateRoomInvitesReceived  PrivateRoomInvite[]  @relation("PrivateRoomInviteRecipient")
+  servers                     Server[]
+  receivedSocialRelationships SocialRelationship[] @relation("SocialAddressee")
+  sentSocialRelationships     SocialRelationship[] @relation("SocialRequester")
+  wallets                     Wallet[]
+  walletSessions              WalletSession[]
+
+  @@index([primaryWalletAddressLower])
+  @@index([lastSeenAt])
+}
+
+model SocialRelationship {
+  id                 String                   @id @default(uuid())
+  requesterProfileId String
+  addresseeProfileId String
+  status             SocialRelationshipStatus @default(PENDING)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  addresseeProfile   Profile                  @relation("SocialAddressee", fields: [addresseeProfileId], references: [id], onDelete: Cascade)
+  requesterProfile   Profile                  @relation("SocialRequester", fields: [requesterProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterProfileId, addresseeProfileId])
+  @@index([addresseeProfileId, status])
+  @@index([requesterProfileId, status])
+}
+
+model Wallet {
+  id           String    @id @default(uuid())
+  address      String
+  addressLower String    @unique
+  chainId      Int?
+  label        String?
+  isPrimary    Boolean   @default(false)
+  profileId    String
+  verifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  profile      Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([chainId])
+}
+
+model WalletAuthChallenge {
+  id           String    @id @default(uuid())
+  addressLower String
+  chainId      Int
+  nonce        String    @unique
+  domain       String
+  statement    String
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([addressLower])
+  @@index([expiresAt])
+}
+
+model WalletSession {
+  id                 String    @id @default(uuid())
+  sessionTokenHash   String    @unique
+  walletAddressLower String
+  chainId            Int
+  profileId          String
+  expiresAt          DateTime
+  revokedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  profile            Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([walletAddressLower])
+  @@index([expiresAt])
+}
+
+model AccessPass {
+  id                   String           @id @default(uuid())
+  walletAddress        String
+  walletAddressLower   String
+  chainId              Int
+  contractAddress      String
+  contractAddressLower String
+  tokenId              String
+  txHash               String           @unique
+  status               AccessPassStatus @default(ACTIVE)
+  tier                 AccessPassTier   @default(LIFETIME)
+  profileId            String
+  mintedAt             DateTime
+  revokedAt            DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  profile              Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([walletAddressLower])
+  @@index([chainId])
+  @@index([contractAddressLower, tokenId])
+}
+
+model Payment {
+  id                         String             @id @default(uuid())
+  walletAddress              String
+  walletAddressLower         String
+  chainId                    Int
+  tokenAddress               String?
+  tokenAddressLower          String?
+  amount                     String
+  currency                   String             @default("USDC")
+  txHash                     String             @unique
+  status                     PaymentStatus      @default(PENDING)
+  purpose                    PaymentPurpose     @default(ACCESS_PASS)
+  profileId                  String
+  createdAt                  DateTime           @default(now())
+  confirmedAt                DateTime?
+  failedAt                   DateTime?
+  amountUnits                String?
+  conversationId             String?
+  privateRoomInviteId        String?
+  receiverWalletAddress      String?
+  receiverWalletAddressLower String?
+  privateRoomInvite          PrivateRoomInvite? @relation(fields: [privateRoomInviteId], references: [id])
+  profile                    Profile            @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([walletAddressLower])
+  @@index([receiverWalletAddressLower])
+  @@index([chainId])
+  @@index([status])
+  @@index([conversationId])
+  @@index([privateRoomInviteId])
+}
+
+model PrivateRoomInvite {
+  id                 String                  @id @default(uuid())
+  conversationId     String
+  serverId           String?
+  priceUsdc          String
+  priceUsdcUnits     String
+  durationHours      Int
+  description        String
+  status             PrivateRoomInviteStatus @default(ACTIVE)
+  creatorProfileId   String
+  recipientProfileId String
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  paidAt             DateTime?
+  payments           Payment[]
+  accesses           PrivateRoomAccess[]
+  creatorProfile     Profile                 @relation("PrivateRoomInviteCreator", fields: [creatorProfileId], references: [id], onDelete: Cascade)
+  recipientProfile   Profile                 @relation("PrivateRoomInviteRecipient", fields: [recipientProfileId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([creatorProfileId])
+  @@index([recipientProfileId])
+  @@index([serverId])
+  @@index([status])
+}
+
+model PrivateRoomAccess {
+  id        String            @id @default(uuid())
+  serverId  String
+  profileId String
+  inviteId  String
+  startsAt  DateTime          @default(now())
+  expiresAt DateTime
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  invite    PrivateRoomInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  profile   Profile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, profileId])
+  @@index([profileId])
+  @@index([inviteId])
+  @@index([expiresAt])
+}
+
+model Server {
+  id         String    @id @default(uuid())
+  name       String
+  imageUrl   String
+  inviteCode String    @unique
+  profileId  String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  channels   Channel[]
+  members    Member[]
+  profile    Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model Member {
+  id                     String          @id @default(uuid())
+  role                   MemberRole      @default(MEMBER)
+  profileId              String
+  serverId               String
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  conversationsInitiated Conversation[]  @relation("MemberOne")
+  conversationsReceived  Conversation[]  @relation("MemberTwo")
+  directMessages         DirectMessage[]
+  profile                Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  server                 Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages               Message[]
+
+  @@unique([profileId, serverId])
+  @@index([profileId])
+  @@index([serverId])
+}
+
+model Channel {
+  id        String      @id @default(uuid())
+  name      String
+  type      ChannelType @default(TEXT)
+  profileId String
+  serverId  String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  profile   Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  server    Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@index([profileId])
+  @@index([serverId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  fileUrl   String?
+  replyToMessageId String?
+  replyToContent String?
+  replyToMemberName String?
+  pinned    Boolean  @default(false)
+  memberId  String
+  channelId String
+  deleted   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([channelId])
+  @@index([memberId])
+}
+
+model Conversation {
+  id                   String               @id @default(uuid())
+  memberOneId          String
+  memberTwoId          String
+  messageRequestStatus MessageRequestStatus @default(ACCEPTED)
+  requestedByProfileId String?
+  memberOne            Member               @relation("MemberOne", fields: [memberOneId], references: [id], onDelete: Cascade)
+  memberTwo            Member               @relation("MemberTwo", fields: [memberTwoId], references: [id], onDelete: Cascade)
+  directMessages       DirectMessage[]
+
+  @@unique([memberOneId, memberTwoId])
+  @@index([memberTwoId])
+  @@index([messageRequestStatus])
+}
+
+model DirectMessage {
+  id             String       @id @default(uuid())
+  content        String
+  fileUrl        String?
+  replyToMessageId String?
+  replyToContent String?
+  replyToMemberName String?
+  pinned         Boolean      @default(false)
+  memberId       String
+  conversationId String
+  deleted        Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  member         Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([conversationId])
+}
+
+enum AccessStatus {
+  PENDING
+  ACTIVE
+  BLOCKED
+}
+
+enum SocialRelationshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum AccessPassStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum AccessPassTier {
+  LIFETIME
+  FOUNDER
+  CREATOR
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum PaymentPurpose {
+  ACCESS_PASS
+  P2P_TRANSFER
+  PRIVATE_ROOM_ACCESS
+}
+
+enum PrivateRoomInviteStatus {
+  ACTIVE
+  PAID
+  CANCELLED
+}
+
+enum MemberRole {
+  ADMIN
+  MODERATOR
+  MEMBER
+  GUEST
+}
+
+enum ChannelType {
+  TEXT
+  AUDIO
+  VIDEO
+}
+
+enum MessageRequestStatus {
+  PENDING
+  ACCEPTED
+  IGNORED
+}
