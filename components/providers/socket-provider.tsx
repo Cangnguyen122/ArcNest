@@ -31,10 +31,21 @@ export const SocketProvider = ({
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const externalSocketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
+    const useInternalSocket =
+      process.env.NODE_ENV !== "production" ||
+      process.env.NEXT_PUBLIC_ENABLE_INTERNAL_SOCKET === "true";
+
+    if (!externalSocketUrl && !useInternalSocket) {
+      setSocket(null);
+      setIsConnected(false);
+      return;
+    }
+
+    const socketUrl = externalSocketUrl || window.location.origin;
     const socketInstance = new (ClientIO as any)(socketUrl, {
-      path: "/api/socket/io",
-      addTrailingSlash: false,
+      path: process.env.NEXT_PUBLIC_SOCKET_PATH || (externalSocketUrl ? "/socket.io" : "/api/socket/io"),
+      ...(externalSocketUrl ? {} : { addTrailingSlash: false }),
     });
 
     socketInstance.on("connect", () => {

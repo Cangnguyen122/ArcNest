@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageIcon, Loader2, Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -85,10 +85,10 @@ export const GifPicker = ({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 transition hover:bg-zinc-300/70 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-600 dark:hover:text-zinc-200"
+          className="flex h-7 min-w-8 items-center justify-center rounded-md px-1.5 text-[10px] font-black tracking-wide text-zinc-500 transition hover:bg-zinc-300/70 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-600 dark:hover:text-zinc-200"
           title="GIF"
         >
-          <ImageIcon className="h-4 w-4" />
+          GIF
         </button>
       </PopoverTrigger>
       <PopoverContent

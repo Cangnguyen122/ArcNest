@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useRef, ElementRef } from "react";
+import { Fragment, useCallback, useEffect, useRef, ElementRef, useState } from "react";
 import { format } from "date-fns";
 import { Member, Message, Profile } from "@prisma/client";
 import { Loader2, ServerCrash } from "lucide-react";
@@ -53,6 +53,8 @@ export const ChatMessages = ({
 
   const chatRef = useRef<ElementRef<"div">>(null);
   const bottomRef = useRef<ElementRef<"div">>(null);
+  const [pendingJumpId, setPendingJumpId] = useState<string | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const { isRoomLive } = useChatSocket({ chatId, type, queryKey, addKey, updateKey });
 
   const {
@@ -75,6 +77,63 @@ export const ChatMessages = ({
     shouldLoadMore: !isFetchingNextPage && !!hasNextPage,
     count: data?.pages?.[0]?.items?.length ?? 0,
   })
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    const element = document.getElementById(`chat-message-${messageId}`);
+
+    if (!element) {
+      return false;
+    }
+
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+    setHighlightedMessageId(messageId);
+    window.setTimeout(() => {
+      setHighlightedMessageId((current) => current === messageId ? null : current);
+    }, 2200);
+
+    return true;
+  }, []);
+
+  useEffect(() => {
+    const handleJump = (event: Event) => {
+      const messageId = (event as CustomEvent<{ messageId?: string }>).detail?.messageId;
+
+      if (!messageId) {
+        return;
+      }
+
+      if (!scrollToMessage(messageId)) {
+        setPendingJumpId(messageId);
+      }
+    };
+
+    window.addEventListener(`chat:${chatId}:jump-message`, handleJump);
+
+    return () => {
+      window.removeEventListener(`chat:${chatId}:jump-message`, handleJump);
+    };
+  }, [chatId, scrollToMessage]);
+
+  useEffect(() => {
+    if (!pendingJumpId || isFetchingNextPage) {
+      return;
+    }
+
+    if (scrollToMessage(pendingJumpId)) {
+      setPendingJumpId(null);
+      return;
+    }
+
+    if (hasNextPage) {
+      fetchNextPage();
+      return;
+    }
+
+    setPendingJumpId(null);
+  }, [data, fetchNextPage, hasNextPage, isFetchingNextPage, pendingJumpId, scrollToMessage]);
 
   if (status === "loading") {
     return (
@@ -141,6 +200,7 @@ export const ChatMessages = ({
                   replyToContent={message.replyToContent}
                   replyToMemberName={message.replyToMemberName}
                   pinned={!!message.pinned}
+                  isHighlighted={highlightedMessageId === message.id}
                   onReply={() => {
                     const nextReply = {
                       id: message.id,

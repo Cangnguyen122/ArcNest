@@ -8,6 +8,8 @@
     "dev": "next dev",
     "clean:next": "node scripts/clean-next-cache.js",
     "dev:clean": "node scripts/clean-next-cache.js && next dev",
+    "socket:dev": "node socket-server.js",
+    "socket:start": "node socket-server.js",
     "build": "next build",
     "start": "node -e \"process.env.NODE_ENV='production'; require('./server.js')\"",
     "lint": "next lint",

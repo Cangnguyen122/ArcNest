@@ -5,6 +5,7 @@ import { UserAvatar } from "@/components/user-avatar";
 import { SocketIndicator } from "@/components/socket-indicator";
 
 import { ChatVideoButton } from "./chat-video-button";
+import { ChatHeaderActions } from "./chat-header-actions";
 
 interface ChatHeaderProps {
   serverId: string;
@@ -12,6 +13,9 @@ interface ChatHeaderProps {
   type: "channel" | "conversation";
   imageUrl?: string;
   isOnline?: boolean;
+  apiUrl?: string;
+  paramKey?: "channelId" | "conversationId";
+  paramValue?: string;
 }
 
 export const ChatHeader = ({
@@ -20,6 +24,9 @@ export const ChatHeader = ({
   type,
   imageUrl,
   isOnline = false,
+  apiUrl,
+  paramKey,
+  paramValue,
 }: ChatHeaderProps) => {
   return (
     <div className="text-md font-semibold px-3 flex h-12 min-w-0 shrink-0 items-center border-neutral-200 dark:border-neutral-800 border-b-2">
@@ -40,6 +47,14 @@ export const ChatHeader = ({
       </p>
       <div className="ml-auto flex shrink-0 items-center gap-x-2">
         <ChatVideoButton />
+        {apiUrl && paramKey && paramValue && (
+          <ChatHeaderActions
+            apiUrl={apiUrl}
+            paramKey={paramKey}
+            paramValue={paramValue}
+            serverId={serverId}
+          />
+        )}
         <SocketIndicator />
       </div>
     </div>

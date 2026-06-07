@@ -4,7 +4,7 @@ import { MemberRole } from "@prisma/client";
 import { NextApiResponseServerIo } from "@/types";
 import { currentProfilePages } from "@/lib/current-profile-pages";
 import { db } from "@/lib/db";
-import { socketChatRoom } from "@/lib/socket-room-token";
+import { publishSocketEvent } from "@/lib/socket-publish";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 import { isPayMessage } from "@/lib/arcnest-pay";
 
@@ -176,7 +176,12 @@ export default async function handler(
 
     const updateKey = `chat:${channelId}:messages:update`;
 
-    res?.socket?.server?.io?.to(socketChatRoom(channelId as string)).emit(updateKey, message);
+    await publishSocketEvent({
+      res,
+      chatId: channelId as string,
+      event: updateKey,
+      payload: message,
+    });
 
     return res.status(200).json(message);
   } catch (error) {

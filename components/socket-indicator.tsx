@@ -1,28 +1,32 @@
 "use client";
 
 import { useSocket } from "@/components/providers/socket-provider";
-import { Badge } from "@/components/ui/badge";
+import { ActionTooltip } from "@/components/action-tooltip";
+import { Radio, RefreshCw } from "lucide-react";
 
 export const SocketIndicator = () => {
   const { isConnected } = useSocket();
-
-  if (!isConnected) {
-    return (
-      <Badge 
-        variant="outline" 
-        className="hidden border-none bg-yellow-600 text-white sm:inline-flex"
-      >
-        Fallback: Polling every 1s
-      </Badge>
-    )
-  }
+  const label = isConnected
+    ? "Realtime connected"
+    : "Realtime unavailable. Using message sync.";
 
   return (
-      <Badge 
-        variant="outline" 
-        className="hidden border-none bg-emerald-600 text-white sm:inline-flex"
+    <ActionTooltip label={label} side="bottom">
+      <div
+        aria-label={label}
+        className={
+          isConnected
+            ? "hidden h-7 shrink-0 items-center gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 text-xs font-medium text-emerald-300 sm:inline-flex"
+            : "hidden h-7 shrink-0 items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/70 px-2 text-xs font-medium text-zinc-300 sm:inline-flex"
+        }
       >
-      Live: Real-time updates
-    </Badge>
+        {isConnected ? (
+          <Radio className="h-3.5 w-3.5" />
+        ) : (
+          <RefreshCw className="h-3.5 w-3.5 text-zinc-400" />
+        )}
+        {isConnected ? "Live" : "Sync"}
+      </div>
+    </ActionTooltip>
   )
 }

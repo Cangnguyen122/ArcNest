@@ -18,6 +18,8 @@ export async function GET(
 
     const cursor = searchParams.get("cursor");
     const conversationId = searchParams.get("conversationId");
+    const pinned = searchParams.get("pinned") === "true";
+    const search = searchParams.get("search")?.trim();
 
     if (!profile) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -68,6 +70,40 @@ export async function GET(
     }
 
     let messages: DirectMessage[] = [];
+
+    if (pinned || search) {
+      messages = await db.directMessage.findMany({
+        take: 25,
+        where: {
+          conversationId,
+          deleted: false,
+          ...(pinned ? { pinned: true } : {}),
+          ...(search
+            ? {
+                content: {
+                  contains: search.slice(0, 100),
+                  mode: "insensitive",
+                },
+              }
+            : {}),
+        },
+        include: {
+          member: {
+            include: {
+              profile: true,
+            }
+          }
+        },
+        orderBy: {
+          createdAt: "desc",
+        }
+      });
+
+      return NextResponse.json({
+        items: messages,
+        nextCursor: null
+      });
+    }
 
     if (cursor) {
       messages = await db.directMessage.findMany({

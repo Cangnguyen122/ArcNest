@@ -6,8 +6,7 @@ import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Member, MemberRole, Profile } from "@prisma/client";
-import { Crown, Edit, FileIcon, Pin, Reply, ShieldCheck, Trash } from "lucide-react";
-import Image from "next/image";
+import { BarChart3, CornerUpLeft, Crown, Edit, FileIcon, Pin, Reply, ShieldCheck, Trash } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 
@@ -42,6 +41,7 @@ interface ChatItemProps {
   replyToContent?: string | null;
   replyToMemberName?: string | null;
   pinned?: boolean;
+  isHighlighted?: boolean;
   onReply?: () => void;
 };
 
@@ -57,6 +57,7 @@ const formSchema = z.object({
 });
 
 const PAY_MESSAGE_PREFIX = "arcnest-pay:v1:";
+const POLL_MESSAGE_PREFIX = "arcnest-poll:v1:";
 
 const decodePayMessage = (content: string) => {
   if (!content.startsWith(PAY_MESSAGE_PREFIX)) {
@@ -70,6 +71,164 @@ const decodePayMessage = (content: string) => {
   }
 };
 
+const decodePollMessage = (content: string) => {
+  if (!content.startsWith(POLL_MESSAGE_PREFIX)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(content.slice(POLL_MESSAGE_PREFIX.length));
+
+    if (
+      payload?.kind !== "poll" ||
+      typeof payload.question !== "string" ||
+      !Array.isArray(payload.options)
+    ) {
+      return null;
+    }
+
+    return {
+      question: payload.question,
+      options: payload.options.filter((option: unknown) => typeof option === "string"),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const ChatAttachment = ({
+  fileUrl,
+  content,
+  isPdf,
+  isGif,
+  isVideo,
+  isImage,
+  isFile,
+}: {
+  fileUrl: string;
+  content: string;
+  isPdf: boolean;
+  isGif: boolean;
+  isVideo: boolean;
+  isImage: boolean;
+  isFile: boolean;
+}) => {
+  const [unknownImageLoaded, setUnknownImageLoaded] = useState(false);
+  const [unknownImageFailed, setUnknownImageFailed] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const shouldProbeImage = isFile && !unknownImageLoaded && !unknownImageFailed;
+  const shouldRenderImage = isImage || unknownImageLoaded;
+
+  return (
+    <>
+      {previewOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setPreviewOpen(false)}
+        >
+          <button
+            type="button"
+            className="absolute right-4 top-4 rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+            onClick={() => setPreviewOpen(false)}
+          >
+            Close
+          </button>
+          {isVideo ? (
+            <video
+              src={fileUrl}
+              controls
+              autoPlay
+              className="max-h-[86vh] max-w-[92vw] rounded-md bg-black"
+              onClick={(event) => event.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={fileUrl}
+              alt={content}
+              className="max-h-[86vh] max-w-[92vw] rounded-md object-contain"
+              onClick={(event) => event.stopPropagation()}
+            />
+          )}
+        </div>
+      )}
+      {shouldProbeImage && (
+        <img
+          src={fileUrl}
+          alt=""
+          className="hidden"
+          onLoad={() => setUnknownImageLoaded(true)}
+          onError={() => setUnknownImageFailed(true)}
+        />
+      )}
+      {shouldRenderImage && (
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="mt-2 block max-w-[360px] overflow-hidden rounded-md border bg-secondary"
+        >
+          <img
+            src={fileUrl}
+            alt={content}
+            className="max-h-80 w-full object-cover"
+          />
+        </button>
+      )}
+      {isGif && (
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="mt-2 block max-w-[320px] overflow-hidden rounded-md border bg-secondary"
+        >
+          <img
+            src={fileUrl}
+            alt={content}
+            className="max-h-72 w-full object-cover"
+          />
+        </button>
+      )}
+      {isPdf && (
+        <div className="relative flex items-center p-2 mt-2 rounded-md bg-background/10">
+          <FileIcon className="h-10 w-10 fill-indigo-200 stroke-indigo-400" />
+          <a
+            href={fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-2 text-sm text-indigo-500 dark:text-indigo-400 hover:underline"
+          >
+            PDF File
+          </a>
+        </div>
+      )}
+      {isVideo && (
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="mt-2 block max-w-[420px] overflow-hidden rounded-md border bg-black"
+        >
+          <video
+            src={fileUrl}
+            muted
+            className="max-h-80 w-full"
+          />
+        </button>
+      )}
+      {isFile && unknownImageFailed && (
+        <div className="relative flex items-center p-2 mt-2 rounded-md bg-background/10">
+          <FileIcon className="h-10 w-10 fill-indigo-200 stroke-indigo-400" />
+          <a
+            href={fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-2 max-w-[320px] truncate text-sm text-indigo-500 hover:underline dark:text-indigo-400"
+          >
+            Attached file
+          </a>
+        </div>
+      )}
+    </>
+  );
+};
+
 export const ChatItem = ({
   id,
   content,
@@ -81,9 +240,11 @@ export const ChatItem = ({
   isUpdated,
   socketUrl,
   socketQuery,
+  replyToMessageId,
   replyToContent,
   replyToMemberName,
   pinned = false,
+  isHighlighted = false,
   onReply,
 }: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -174,14 +335,24 @@ export const ChatItem = ({
   const isOwner = currentMember.id === member.id;
   const canDeleteMessage = !deleted && (isAdmin || isModerator || isOwner);
   const payPayload = !fileUrl && !deleted ? decodePayMessage(content) : null;
-  const canEditMessage = !deleted && isOwner && !fileUrl && !payPayload;
-  const isPDF = fileType === "pdf" && fileUrl;
+  const pollPayload = !fileUrl && !deleted ? decodePollMessage(content) : null;
+  const canEditMessage = !deleted && isOwner && !fileUrl && !payPayload && !pollPayload;
+  const isPDF = fileType === "pdf" && !!fileUrl;
   const isGif = !!fileUrl && /\.gif(\?|$)/i.test(fileUrl);
-  const isImage = !isPDF && !isGif && fileUrl;
+  const isVideo = !!fileUrl && /\.(mp4|mov|webm|m4v)(\?|$)/i.test(fileUrl);
+  const isImage = !isPDF && !isGif && !isVideo && !!fileUrl && /\.(png|jpe?g|webp|avif)(\?|$)/i.test(fileUrl);
+  const isFile = !!fileUrl && !isPDF && !isGif && !isVideo && !isImage;
+  const attachmentCaption = fileUrl && content && content !== fileUrl && content !== "GIF" ? content : "";
   const roleIcon = roleIconMap[member.role];
 
   return (
-    <div className="relative group flex items-center hover:bg-black/5 p-4 transition w-full">
+    <div
+      id={`chat-message-${id}`}
+      className={cn(
+        "relative group flex items-center hover:bg-black/5 p-4 transition w-full",
+        isHighlighted && "chat-message-highlight"
+      )}
+    >
       <div className="group flex gap-x-2 items-start w-full">
         <div onClick={onMemberClick} className="cursor-pointer hover:drop-shadow-md transition">
           <UserAvatar src={member.profile.imageUrl} />
@@ -202,58 +373,60 @@ export const ChatItem = ({
               {timestamp}
             </span>
           </div>
-          {isImage && (
-            <a 
-              href={fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="relative aspect-square rounded-md mt-2 overflow-hidden border flex items-center bg-secondary h-48 w-48"
-            >
-              <Image
-                src={fileUrl}
-                alt={content}
-                fill
-                className="object-cover"
-              />
-            </a>
+          {fileUrl && (
+            <ChatAttachment
+              fileUrl={fileUrl}
+              content={content}
+              isPdf={isPDF}
+              isGif={isGif}
+              isVideo={isVideo}
+              isImage={isImage}
+              isFile={isFile}
+            />
           )}
-          {isGif && (
-            <a
-              href={fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 block max-w-[320px] overflow-hidden rounded-md border bg-secondary"
-            >
-              <img
-                src={fileUrl}
-                alt={content}
-                className="max-h-72 w-full object-cover"
-              />
-            </a>
-          )}
-          {isPDF && (
-            <div className="relative flex items-center p-2 mt-2 rounded-md bg-background/10">
-              <FileIcon className="h-10 w-10 fill-indigo-200 stroke-indigo-400" />
-              <a 
-                href={fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-2 text-sm text-indigo-500 dark:text-indigo-400 hover:underline"
-              >
-                PDF File
-              </a>
-            </div>
+          {attachmentCaption && !isEditing && (
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+              {attachmentCaption}
+              {isUpdated && !deleted && (
+                <span className="text-[10px] mx-2 text-zinc-500 dark:text-zinc-400">
+                  (edited)
+                </span>
+              )}
+            </p>
           )}
           {replyToContent && !deleted && (
-            <div className="mt-2 max-w-xl rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800/70">
-              <div className="mb-1 flex items-center gap-1.5 font-semibold text-indigo-500">
-                <Reply className="h-3 w-3" />
-                {replyToMemberName || "Message"}
+            <button
+              type="button"
+              onClick={() => {
+                if (!replyToMessageId) {
+                  return;
+                }
+
+                const chatId = socketQuery.channelId || socketQuery.conversationId;
+
+                if (typeof chatId !== "string") {
+                  return;
+                }
+
+                window.dispatchEvent(new CustomEvent(`chat:${chatId}:jump-message`, {
+                  detail: {
+                    messageId: replyToMessageId,
+                  },
+                }));
+              }}
+              className="mb-1.5 mt-1.5 flex max-w-2xl items-stretch text-left transition hover:translate-x-0.5"
+            >
+              <span className="w-[3px] shrink-0 rounded-full bg-indigo-400/80" />
+              <div className="min-w-0 rounded-r-md bg-zinc-100/70 px-2.5 py-1.5 dark:bg-zinc-800/70">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold leading-none text-indigo-500 dark:text-indigo-300">
+                  <CornerUpLeft className="h-3 w-3" />
+                  {replyToMemberName || "Message"}
+                </div>
+                <div className="mt-1 line-clamp-1 break-words text-xs leading-5 text-zinc-500 dark:text-zinc-400">
+                  {replyToContent}
+                </div>
               </div>
-              <div className="line-clamp-2 break-words text-zinc-500 dark:text-zinc-400">
-                {replyToContent}
-              </div>
-            </div>
+            </button>
           )}
           {pinned && !deleted && (
             <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-300">
@@ -267,7 +440,34 @@ export const ChatItem = ({
               currentProfileId={currentMember.profileId}
             />
           )}
-          {!fileUrl && !payPayload && !isEditing && (
+          {pollPayload && !isEditing && (
+            <div className="mt-2 max-w-md rounded-xl border border-indigo-200 bg-indigo-50/70 p-3 dark:border-indigo-500/20 dark:bg-indigo-500/10">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 text-white">
+                  <BarChart3 className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-indigo-500 dark:text-indigo-300">
+                    Poll
+                  </p>
+                  <p className="break-words text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {pollPayload.question}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                {pollPayload.options.map((option: string, index: number) => (
+                  <div
+                    key={`${option}-${index}`}
+                    className="rounded-lg border border-white/70 bg-white/80 px-3 py-2 text-sm font-medium text-zinc-700 dark:border-white/10 dark:bg-zinc-950/30 dark:text-zinc-200"
+                  >
+                    {option}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {!fileUrl && !payPayload && !pollPayload && !isEditing && (
             <p className={cn(
               "text-sm text-zinc-600 dark:text-zinc-300",
               deleted && "italic text-zinc-500 dark:text-zinc-400 text-xs mt-1"

@@ -2,6 +2,40 @@
 
 Web3 community chat with wallet login, Arc access passes, realtime rooms, and Discord-style servers.
 
+## Realtime Deployment Notes
+
+Vercel Functions cannot run as a WebSocket server. In production, this app does not connect to the internal `/api/socket/io` Socket.IO endpoint unless it is explicitly enabled. This prevents Socket.IO handshake requests from returning noisy `400 Bad Request` errors on Vercel.
+
+Supported deployment modes:
+
+- Local/custom Node server: run `npm run dev` or `npm start`; the internal Socket.IO endpoint can be used.
+- Vercel without a realtime server: leave `NEXT_PUBLIC_SOCKET_URL` empty. Chat falls back to message polling so the UI still works.
+- Vercel with realtime: deploy the included Socket.IO service on a separate long-lived Node/container host, set `SOCKET_SERVER_URL` so the message APIs publish to it, and set `NEXT_PUBLIC_SOCKET_URL` so browsers connect to it. Set `NEXT_PUBLIC_SOCKET_PATH` only if the external server does not use `/socket.io`.
+
+Only set `NEXT_PUBLIC_ENABLE_INTERNAL_SOCKET=true` in production when the deployment platform actually supports long-lived Socket.IO connections.
+
+### Running The Separate Socket Server
+
+Run the Next app and socket server as two processes:
+
+```bash
+npm run socket:dev
+npm run dev
+```
+
+Use the same `SOCKET_TOKEN_SECRET` in both processes. For local development with the separate socket server:
+
+```env
+SOCKET_TOKEN_SECRET=replace-with-one-shared-secret
+SOCKET_SERVER_SECRET=replace-with-one-publish-secret
+SOCKET_SERVER_URL=http://localhost:3001
+SOCKET_PORT=3001
+SOCKET_CORS_ORIGIN=http://localhost:3000
+NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
+```
+
+On Vercel, set `SOCKET_SERVER_URL` and `SOCKET_SERVER_SECRET` as server-side env vars so message APIs can publish realtime events. Set `NEXT_PUBLIC_SOCKET_URL` to the public URL of the socket server so browsers connect there directly.
+
 ## Engineering Working Rules
 
 ### 1. Think Before Coding

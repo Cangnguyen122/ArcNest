@@ -3,7 +3,7 @@ import { NextApiRequest } from "next";
 import { NextApiResponseServerIo } from "@/types";
 import { currentProfilePages } from "@/lib/current-profile-pages";
 import { db } from "@/lib/db";
-import { socketChatRoom } from "@/lib/socket-room-token";
+import { publishSocketEvent } from "@/lib/socket-publish";
 import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 import { areProfilesBlocked } from "@/lib/social";
 import { isPayMessage } from "@/lib/arcnest-pay";
@@ -142,7 +142,12 @@ export default async function handler(
 
     const channelKey = `chat:${conversationId}:messages`;
 
-    res?.socket?.server?.io?.to(socketChatRoom(conversationId as string)).emit(channelKey, message);
+    await publishSocketEvent({
+      res,
+      chatId: conversationId as string,
+      event: channelKey,
+      payload: message,
+    });
 
     return res.status(200).json(message);
   } catch (error) {

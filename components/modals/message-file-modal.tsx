@@ -80,7 +80,7 @@ export const MessageFileModal = () => {
             Add an attachment
           </DialogTitle>
           <DialogDescription className="text-center text-zinc-500">
-            Send a file as a message
+            Send an image, video, PDF, or file as a message
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

@@ -71,6 +71,9 @@ const MemberIdPage = async ({
           serverId={params.serverId}
           type="conversation"
           isOnline={isOtherMemberOnline}
+          apiUrl="/api/direct-messages"
+          paramKey="conversationId"
+          paramValue={conversation.id}
         />
         {searchParams.video && (
           <MediaRoom

@@ -12,6 +12,15 @@ export const config = {
 };
 
 const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
+  if (
+    process.env.VERCEL === "1" &&
+    process.env.NEXT_PUBLIC_ENABLE_INTERNAL_SOCKET !== "true"
+  ) {
+    return res.status(404).json({
+      error: "Socket.IO is disabled on Vercel. Configure NEXT_PUBLIC_SOCKET_URL or use polling fallback.",
+    });
+  }
+
   if (!res.socket.server.io) {
     const path = "/api/socket/io";
     const httpServer: NetServer = res.socket.server as any;

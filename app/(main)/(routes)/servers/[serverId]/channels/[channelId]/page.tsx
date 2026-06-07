@@ -53,6 +53,9 @@ const ChannelIdPage = async ({
         name={channel.name}
         serverId={channel.serverId}
         type="channel"
+        apiUrl="/api/messages"
+        paramKey="channelId"
+        paramValue={channel.id}
       />
       {channel.type === ChannelType.TEXT && searchParams.video && (
         <MediaRoom

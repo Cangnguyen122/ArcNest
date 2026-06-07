@@ -10,6 +10,7 @@ import { ARC_HOUSE_NAME, ensureCoreServersForPassHolder } from "@/lib/server-pro
 
 import { NavigationAction } from "./navigation-action";
 import { NavigationItem } from "./navigation-item";
+import { NavigationShop } from "./navigation-shop";
 import { WalletUserButton } from "./wallet-user-button";
 
 export const NavigationSidebar = async () => {
@@ -53,6 +54,7 @@ export const NavigationSidebar = async () => {
       className="space-y-4 flex h-full w-full min-w-0 flex-col items-center overflow-hidden text-primary dark:bg-[#1E1F22] bg-[#E3E5E8] py-3"
     >
       <NavigationAction canCreateServer={!!activePass} />
+      <NavigationShop />
       <Separator
         className="h-[2px] bg-zinc-300 dark:bg-zinc-700 rounded-md w-10 mx-auto"
       />
