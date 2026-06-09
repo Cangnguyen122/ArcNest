@@ -40,10 +40,32 @@ const nextConfig = {
     return config;
   },
   images: {
-    domains: [
-      "uploadthing.com",
-      "utfs.io"
-    ]
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "uploadthing.com",
+      },
+      {
+        protocol: "https",
+        hostname: "utfs.io",
+      },
+      {
+        protocol: "https",
+        hostname: "*.giphy.com",
+      },
+      {
+        protocol: "https",
+        hostname: "giphy.com",
+      },
+      {
+        protocol: "https",
+        hostname: "ipfs.io",
+      },
+      {
+        protocol: "https",
+        hostname: "*.mypinata.cloud",
+      },
+    ],
   },
 }
 

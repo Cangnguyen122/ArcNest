@@ -2,6 +2,7 @@
 
 import type { AccessPass } from "@prisma/client";
 import { Award, ExternalLink, Gem, Sparkles } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 import { ACCESS_PASS_NAME } from "@/lib/brand";
@@ -121,10 +122,12 @@ export const AccessPassNftCard = ({
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.16),transparent_34%)]" />
           <div className="relative aspect-square overflow-hidden rounded-[20px] border border-white/10 bg-[#101827]">
             {imageUrl ? (
-              <img
+              <Image
                 src={imageUrl}
                 alt={metadata?.name || ACCESS_PASS_NAME}
-                className="h-full w-full object-cover"
+                fill
+                sizes="(max-width: 768px) 90vw, 420px"
+                className="object-cover"
               />
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(circle_at_30%_18%,rgba(34,211,238,0.35),transparent_30%),linear-gradient(145deg,#111827,#312E81_52%,#062A31)] px-6 text-center">

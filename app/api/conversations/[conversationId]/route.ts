@@ -167,6 +167,7 @@ export async function GET(
         where: {
           conversationId: conversation.id,
           deleted: false,
+          fileUrl: null,
           content: {
             contains: "http",
             mode: "insensitive",

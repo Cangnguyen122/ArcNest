@@ -2,6 +2,7 @@
 
 import { Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 import {
   Popover,
@@ -121,10 +122,13 @@ export const GifPicker = ({
                 onClick={() => onSelect(gif.url)}
                 className="relative aspect-square overflow-hidden rounded-md bg-zinc-100 transition hover:opacity-80 dark:bg-zinc-800"
               >
-                <img
+                <Image
                   src={gif.previewUrl}
                   alt={gif.title}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="112px"
+                  className="object-cover"
+                  unoptimized
                 />
               </button>
             ))}

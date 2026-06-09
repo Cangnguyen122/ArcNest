@@ -22,6 +22,19 @@ const shortAddress = (address?: string | null) => {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
+const walletAddressPattern = /^0x[a-fA-F0-9]{40}$/;
+const shortWalletNamePattern = /^0x[a-fA-F0-9]{4}\.\.\.[a-fA-F0-9]{4}'s Arc Room$/;
+
+const getPersonalServerOwnerName = (profile: ProfileForProvisioning) => {
+  const name = profile.name?.trim();
+
+  if (name && !walletAddressPattern.test(name)) {
+    return name;
+  }
+
+  return shortAddress(profile.primaryWalletAddress || profile.primaryWalletAddressLower);
+};
+
 const ensureMembership = async ({
   serverId,
   profileId,
@@ -135,24 +148,48 @@ export const ensureArcHouseForProfile = async (profile: ProfileForProvisioning) 
 };
 
 export const ensurePersonalPassServerForProfile = async (profile: ProfileForProvisioning) => {
-  const ownerTag = shortAddress(profile.primaryWalletAddress || profile.primaryWalletAddressLower);
+  const ownerTag = getPersonalServerOwnerName(profile);
   const serverName = `${ownerTag}'s Arc Room`;
   const existingServer = await db.server.findFirst({
     where: {
       profileId: profile.id,
-      name: serverName,
+      OR: [
+        {
+          name: serverName,
+        },
+        {
+          name: {
+            contains: "'s Arc Room",
+          },
+        },
+      ],
     },
   });
 
   if (existingServer) {
+    const shouldRenameServer =
+      existingServer.name !== serverName &&
+      shortWalletNamePattern.test(existingServer.name);
+
+    const server = shouldRenameServer
+      ? await db.server.update({
+        where: {
+          id: existingServer.id,
+        },
+        data: {
+          name: serverName,
+        },
+      })
+      : existingServer;
+
     await Promise.all([
-      ensureChannel({ serverId: existingServer.id, profileId: profile.id, name: "general", type: ChannelType.TEXT }),
-      ensureChannel({ serverId: existingServer.id, profileId: profile.id, name: "announcements", type: ChannelType.TEXT }),
-      ensureChannel({ serverId: existingServer.id, profileId: profile.id, name: "voice", type: ChannelType.AUDIO }),
-      ensureChannel({ serverId: existingServer.id, profileId: profile.id, name: "video-room", type: ChannelType.VIDEO }),
+      ensureChannel({ serverId: server.id, profileId: profile.id, name: "general", type: ChannelType.TEXT }),
+      ensureChannel({ serverId: server.id, profileId: profile.id, name: "announcements", type: ChannelType.TEXT }),
+      ensureChannel({ serverId: server.id, profileId: profile.id, name: "voice", type: ChannelType.AUDIO }),
+      ensureChannel({ serverId: server.id, profileId: profile.id, name: "video-room", type: ChannelType.VIDEO }),
     ]);
 
-    return existingServer;
+    return server;
   }
 
   return db.server.create({

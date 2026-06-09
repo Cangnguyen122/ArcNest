@@ -239,6 +239,7 @@ model Channel {
   id        String      @id @default(uuid())
   name      String
   type      ChannelType @default(TEXT)
+  sharingDisabled Boolean @default(false)
   profileId String
   serverId  String
   createdAt DateTime    @default(now())
@@ -268,6 +269,8 @@ model Message {
   member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([channelId])
+  @@index([channelId, createdAt])
+  @@index([channelId, pinned, createdAt])
   @@index([memberId])
 }
 
@@ -275,6 +278,7 @@ model Conversation {
   id                   String               @id @default(uuid())
   memberOneId          String
   memberTwoId          String
+  sharingDisabled      Boolean              @default(false)
   messageRequestStatus MessageRequestStatus @default(ACCEPTED)
   requestedByProfileId String?
   memberOne            Member               @relation("MemberOne", fields: [memberOneId], references: [id], onDelete: Cascade)
@@ -304,6 +308,9 @@ model DirectMessage {
 
   @@index([memberId])
   @@index([conversationId])
+  @@index([conversationId, createdAt])
+  @@index([conversationId, pinned, createdAt])
+  @@index([conversationId, fileUrl, createdAt])
 }
 
 enum AccessStatus {

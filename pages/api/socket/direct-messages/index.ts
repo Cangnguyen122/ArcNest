@@ -8,6 +8,64 @@ import { rateLimit, rateLimitKey } from "@/lib/rate-limit";
 import { areProfilesBlocked } from "@/lib/social";
 import { isPayMessage } from "@/lib/arcnest-pay";
 
+const FORWARD_MESSAGE_PREFIX = "arcnest-forward:v1:";
+
+const getForwardSource = (content: string) => {
+  if (!content.startsWith(FORWARD_MESSAGE_PREFIX)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(content.slice(FORWARD_MESSAGE_PREFIX.length));
+
+    if (
+      (payload?.sourceType !== "channel" && payload?.sourceType !== "conversation") ||
+      typeof payload.sourceId !== "string"
+    ) {
+      return null;
+    }
+
+    return {
+      type: payload.sourceType as "channel" | "conversation",
+      id: payload.sourceId as string,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const isForwardSourceLocked = async (content: string) => {
+  const source = getForwardSource(content);
+
+  if (!source) {
+    return content.startsWith(FORWARD_MESSAGE_PREFIX);
+  }
+
+  if (source.type === "channel") {
+    const channel = await db.channel.findUnique({
+      where: {
+        id: source.id,
+      },
+      select: {
+        sharingDisabled: true,
+      },
+    });
+
+    return !!channel?.sharingDisabled;
+  }
+
+  const conversation = await db.conversation.findUnique({
+    where: {
+      id: source.id,
+    },
+    select: {
+      sharingDisabled: true,
+    },
+  });
+
+  return !!conversation?.sharingDisabled;
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponseServerIo,
@@ -46,6 +104,10 @@ export default async function handler(
 
     if (isPayMessage(content)) {
       return res.status(400).json({ error: "Payment cards must be created through ArcNest Pay." });
+    }
+
+    if (await isForwardSourceLocked(content)) {
+      return res.status(403).json({ error: "Sharing is disabled for the source chat." });
     }
 
     const conversation = await db.conversation.findFirst({

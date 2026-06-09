@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Clock, FileText, ImageIcon, LinkIcon, Loader2, Lock, PlaySquare, Send, ShieldCheck, Users, Video, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import { parseUnits } from "viem";
 import { useAccount, useNetwork, usePublicClient, useSwitchNetwork, useWalletClient } from "wagmi";
@@ -106,9 +107,12 @@ const SharedMediaThumb = ({
   if (shouldProbeImage) {
     return (
       <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={item.fileUrl || ""}
           alt=""
+          loading="lazy"
+          decoding="async"
           className="hidden"
           onLoad={() => setImageLoaded(true)}
           onError={() => setImageFailed(true)}
@@ -122,11 +126,16 @@ const SharedMediaThumb = ({
 
   if (showImage && item.fileUrl) {
     return (
-      <img
-        src={item.fileUrl}
-        alt={item.content || "Shared media"}
-        className="h-10 w-10 shrink-0 rounded-md object-cover"
-      />
+      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-zinc-200 dark:bg-zinc-800">
+        <Image
+          src={item.fileUrl}
+          alt={item.content || "Shared media"}
+          fill
+          sizes="40px"
+          className="object-cover"
+          unoptimized={activeSharedType === "gifs"}
+        />
+      </div>
     );
   }
 
@@ -405,7 +414,15 @@ export const DmPaySidebar = ({
                 return (
                   <div key={item.id} className="flex items-center gap-2 rounded-md px-2 py-2">
                     {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name || "Server"} className="h-8 w-8 rounded-md object-cover" />
+                      <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md">
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.name || "Server"}
+                          fill
+                          sizes="32px"
+                          className="object-cover"
+                        />
+                      </div>
                     ) : (
                       <div className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800">
                         <Users className="h-4 w-4 text-zinc-500" />
@@ -640,11 +657,16 @@ export const DmPaySidebar = ({
               className="max-h-[80vh] w-full rounded-md bg-black"
             />
           ) : previewItem?.fileUrl ? (
-            <img
-              src={previewItem.fileUrl}
-              alt={previewItem.content || "Shared media"}
-              className="max-h-[80vh] w-full rounded-md object-contain"
-            />
+            <div className="relative h-[80vh] w-full rounded-md">
+              <Image
+                src={previewItem.fileUrl}
+                alt={previewItem.content || "Shared media"}
+                fill
+                sizes="90vw"
+                className="object-contain"
+                unoptimized={activeSharedType === "gifs"}
+              />
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>

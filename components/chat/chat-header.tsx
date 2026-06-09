@@ -16,6 +16,7 @@ interface ChatHeaderProps {
   apiUrl?: string;
   paramKey?: "channelId" | "conversationId";
   paramValue?: string;
+  sharingDisabled?: boolean;
 }
 
 export const ChatHeader = ({
@@ -27,6 +28,7 @@ export const ChatHeader = ({
   apiUrl,
   paramKey,
   paramValue,
+  sharingDisabled = false,
 }: ChatHeaderProps) => {
   return (
     <div className="text-md font-semibold px-3 flex h-12 min-w-0 shrink-0 items-center border-neutral-200 dark:border-neutral-800 border-b-2">
@@ -53,6 +55,7 @@ export const ChatHeader = ({
             paramKey={paramKey}
             paramValue={paramValue}
             serverId={serverId}
+            sharingDisabled={sharingDisabled}
           />
         )}
         <SocketIndicator />

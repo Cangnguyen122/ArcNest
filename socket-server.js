@@ -24,6 +24,10 @@ if (process.env.NODE_ENV === "production" && !serverSecret) {
   throw new Error("SOCKET_SERVER_SECRET is required in production");
 }
 
+if (process.env.NODE_ENV === "production" && !process.env.SOCKET_CORS_ORIGIN) {
+  throw new Error("SOCKET_CORS_ORIGIN is required in production");
+}
+
 const base64UrlEncode = (value) => {
   return Buffer.from(value)
     .toString("base64")
@@ -48,6 +52,10 @@ const sign = (body) => {
 
 const socketChatRoom = (chatId) => {
   return `chat-room:${chatId}`;
+};
+
+const isAllowedChatEvent = (chatId, event) => {
+  return event === `chat:${chatId}:messages` || event === `chat:${chatId}:messages:update`;
 };
 
 const verifySocketRoomToken = (token, chatId) => {
@@ -138,7 +146,7 @@ const httpServer = createServer(async (req, res) => {
   try {
     const { chatId, event, payload } = await readJson(req);
 
-    if (typeof chatId !== "string" || typeof event !== "string") {
+    if (typeof chatId !== "string" || typeof event !== "string" || !isAllowedChatEvent(chatId, event)) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid publish payload" }));
       return;

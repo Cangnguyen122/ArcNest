@@ -46,6 +46,11 @@ export const SocketProvider = ({
     const socketInstance = new (ClientIO as any)(socketUrl, {
       path: process.env.NEXT_PUBLIC_SOCKET_PATH || (externalSocketUrl ? "/socket.io" : "/api/socket/io"),
       ...(externalSocketUrl ? {} : { addTrailingSlash: false }),
+      ...(externalSocketUrl ? { transports: ["websocket"] } : {}),
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 5000,
+      timeout: 10000,
     });
 
     socketInstance.on("connect", () => {

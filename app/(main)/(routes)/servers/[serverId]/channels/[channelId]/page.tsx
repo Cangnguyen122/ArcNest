@@ -56,6 +56,7 @@ const ChannelIdPage = async ({
         apiUrl="/api/messages"
         paramKey="channelId"
         paramValue={channel.id}
+        sharingDisabled={channel.sharingDisabled}
       />
       {channel.type === ChannelType.TEXT && searchParams.video && (
         <MediaRoom
@@ -79,6 +80,7 @@ const ChannelIdPage = async ({
             }}
             paramKey="channelId"
             paramValue={channel.id}
+            sharingDisabled={channel.sharingDisabled}
           />
           <ChatInput
             chatId={channel.id}

@@ -59,6 +59,18 @@ const isVideoFile = (file: File) => {
   return file.type.startsWith("video/");
 };
 
+const getAttachmentLimitMb = (file: File) => {
+  if (isImageFile(file)) {
+    return 8;
+  }
+
+  if (isVideoFile(file)) {
+    return 64;
+  }
+
+  return 16;
+};
+
 export const ChatInput = ({
   chatId,
   apiUrl,
@@ -93,6 +105,18 @@ export const ChatInput = ({
 
   const isLoading = form.formState.isSubmitting;
   const isSubmitting = isLoading || isUploading;
+
+  const handleAttachmentSelect = (file: File) => {
+    const limitMb = getAttachmentLimitMb(file);
+    const sizeMb = file.size / 1024 / 1024;
+
+    if (sizeMb > limitMb) {
+      window.alert(`File is too large. Maximum size is ${limitMb} MB.`);
+      return;
+    }
+
+    setPendingAttachment(file);
+  };
 
   useEffect(() => {
     if (!pendingAttachment || (!isImageFile(pendingAttachment) && !isVideoFile(pendingAttachment))) {
@@ -250,7 +274,7 @@ export const ChatInput = ({
                     >
                       <ChatAttachmentUpload
                         disabled={isSubmitting}
-                        onSelect={setPendingAttachment}
+                        onSelect={handleAttachmentSelect}
                       />
                       <button
                         type="button"

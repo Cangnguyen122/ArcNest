@@ -36,6 +36,8 @@ NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
 
 On Vercel, set `SOCKET_SERVER_URL` and `SOCKET_SERVER_SECRET` as server-side env vars so message APIs can publish realtime events. Set `NEXT_PUBLIC_SOCKET_URL` to the public URL of the socket server so browsers connect there directly.
 
+In production, `SOCKET_CORS_ORIGIN` must be the exact public Next.js origin, for example `https://your-app.vercel.app`. Do not leave the socket server open to every origin.
+
 ## Engineering Working Rules
 
 ### 1. Think Before Coding

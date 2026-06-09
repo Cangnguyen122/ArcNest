@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import qs from "query-string";
-import { ArrowUpRight, MoreVertical, Pin, Search, Trash2, User, XCircle } from "lucide-react";
+import { ArrowUpRight, MoreVertical, Pin, Search, Share2, Trash2, User, XCircle } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
@@ -37,6 +37,7 @@ interface ChatHeaderActionsProps {
   paramKey: "channelId" | "conversationId";
   paramValue: string;
   serverId: string;
+  sharingDisabled: boolean;
 }
 
 const fetchHeaderMessages = async (url: string) => {
@@ -151,6 +152,7 @@ export const ChatHeaderActions = ({
   paramKey,
   paramValue,
   serverId,
+  sharingDisabled,
 }: ChatHeaderActionsProps) => {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -158,6 +160,8 @@ export const ChatHeaderActions = ({
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [isMutatingConversation, setIsMutatingConversation] = useState(false);
+  const [isMutatingSharing, setIsMutatingSharing] = useState(false);
+  const [localSharingDisabled, setLocalSharingDisabled] = useState(sharingDisabled);
   const canMutateConversation = paramKey === "conversationId";
 
   const pinnedUrl = useMemo(() => qs.stringifyUrl({
@@ -273,6 +277,46 @@ export const ChatHeaderActions = ({
     }
   };
 
+  const toggleSharing = async () => {
+    if (isMutatingSharing) {
+      return;
+    }
+
+    const nextValue = !localSharingDisabled;
+
+    try {
+      setIsMutatingSharing(true);
+      setLocalSharingDisabled(nextValue);
+
+      const response = await fetch(qs.stringifyUrl({
+        url: "/api/chat-sharing",
+        query: {
+          type: paramKey === "channelId" ? "channel" : "conversation",
+          id: paramValue,
+        },
+      }), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sharingDisabled: nextValue,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not update sharing setting");
+      }
+
+      router.refresh();
+    } catch (error) {
+      console.log(error);
+      setLocalSharingDisabled(!nextValue);
+    } finally {
+      setIsMutatingSharing(false);
+    }
+  };
+
   return (
     <>
       <Popover open={pinOpen} onOpenChange={setPinOpen}>
@@ -349,6 +393,13 @@ export const ChatHeaderActions = ({
           <DropdownMenuItem onClick={() => router.push("/profile")}>
             <User className="mr-2 h-4 w-4" />
             View profile
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={isMutatingSharing}
+            onClick={toggleSharing}
+          >
+            <Share2 className="mr-2 h-4 w-4" />
+            {localSharingDisabled ? "Allow sharing" : "No sharing"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

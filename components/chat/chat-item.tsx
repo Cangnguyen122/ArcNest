@@ -6,9 +6,10 @@ import qs from "query-string";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Member, MemberRole, Profile } from "@prisma/client";
-import { BarChart3, CornerUpLeft, Crown, Edit, FileIcon, Pin, Reply, ShieldCheck, Trash } from "lucide-react";
-import { useEffect, useState } from "react";
+import { BarChart3, CornerUpLeft, Crown, Edit, FileIcon, Forward, Pin, Reply, ShieldCheck, Trash } from "lucide-react";
+import { memo, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Image from "next/image";
 
 import { UserAvatar } from "@/components/user-avatar";
 import { ActionTooltip } from "@/components/action-tooltip";
@@ -42,6 +43,7 @@ interface ChatItemProps {
   replyToMemberName?: string | null;
   pinned?: boolean;
   isHighlighted?: boolean;
+  sharingDisabled?: boolean;
   onReply?: () => void;
 };
 
@@ -58,6 +60,7 @@ const formSchema = z.object({
 
 const PAY_MESSAGE_PREFIX = "arcnest-pay:v1:";
 const POLL_MESSAGE_PREFIX = "arcnest-poll:v1:";
+const FORWARD_MESSAGE_PREFIX = "arcnest-forward:v1:";
 
 const decodePayMessage = (content: string) => {
   if (!content.startsWith(PAY_MESSAGE_PREFIX)) {
@@ -90,6 +93,31 @@ const decodePollMessage = (content: string) => {
     return {
       question: payload.question,
       options: payload.options.filter((option: unknown) => typeof option === "string"),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const decodeForwardMessage = (content: string) => {
+  if (!content.startsWith(FORWARD_MESSAGE_PREFIX)) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(content.slice(FORWARD_MESSAGE_PREFIX.length));
+
+    if (
+      payload?.kind !== "forward" ||
+      typeof payload.from !== "string" ||
+      typeof payload.content !== "string"
+    ) {
+      return null;
+    }
+
+    return {
+      from: payload.from,
+      content: payload.content,
     };
   } catch {
     return null;
@@ -142,19 +170,29 @@ const ChatAttachment = ({
               onClick={(event) => event.stopPropagation()}
             />
           ) : (
-            <img
-              src={fileUrl}
-              alt={content}
-              className="max-h-[86vh] max-w-[92vw] rounded-md object-contain"
+            <div
+              className="relative h-[86vh] w-[92vw]"
               onClick={(event) => event.stopPropagation()}
-            />
+            >
+              <Image
+                src={fileUrl}
+                alt={content || "Attachment preview"}
+                fill
+                sizes="92vw"
+                className="object-contain"
+                unoptimized={isGif}
+              />
+            </div>
           )}
         </div>
       )}
       {shouldProbeImage && (
+        /* eslint-disable-next-line @next/next/no-img-element */
         <img
           src={fileUrl}
           alt=""
+          loading="lazy"
+          decoding="async"
           className="hidden"
           onLoad={() => setUnknownImageLoaded(true)}
           onError={() => setUnknownImageFailed(true)}
@@ -164,12 +202,14 @@ const ChatAttachment = ({
         <button
           type="button"
           onClick={() => setPreviewOpen(true)}
-          className="mt-2 block max-w-[360px] overflow-hidden rounded-md border bg-secondary"
+          className="relative mt-2 block h-64 w-full max-w-[360px] overflow-hidden rounded-md border bg-secondary"
         >
-          <img
+          <Image
             src={fileUrl}
-            alt={content}
-            className="max-h-80 w-full object-cover"
+            alt={content || "Image attachment"}
+            fill
+            sizes="(max-width: 640px) 70vw, 360px"
+            className="object-cover"
           />
         </button>
       )}
@@ -177,12 +217,15 @@ const ChatAttachment = ({
         <button
           type="button"
           onClick={() => setPreviewOpen(true)}
-          className="mt-2 block max-w-[320px] overflow-hidden rounded-md border bg-secondary"
+          className="relative mt-2 block h-56 w-full max-w-[320px] overflow-hidden rounded-md border bg-secondary"
         >
-          <img
+          <Image
             src={fileUrl}
-            alt={content}
-            className="max-h-72 w-full object-cover"
+            alt={content || "GIF attachment"}
+            fill
+            sizes="(max-width: 640px) 70vw, 320px"
+            className="object-cover"
+            unoptimized
           />
         </button>
       )}
@@ -208,6 +251,7 @@ const ChatAttachment = ({
           <video
             src={fileUrl}
             muted
+            preload="metadata"
             className="max-h-80 w-full"
           />
         </button>
@@ -229,7 +273,7 @@ const ChatAttachment = ({
   );
 };
 
-export const ChatItem = ({
+export const ChatItem = memo(({
   id,
   content,
   member,
@@ -245,6 +289,7 @@ export const ChatItem = ({
   replyToMemberName,
   pinned = false,
   isHighlighted = false,
+  sharingDisabled = false,
   onReply,
 }: ChatItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -336,13 +381,14 @@ export const ChatItem = ({
   const canDeleteMessage = !deleted && (isAdmin || isModerator || isOwner);
   const payPayload = !fileUrl && !deleted ? decodePayMessage(content) : null;
   const pollPayload = !fileUrl && !deleted ? decodePollMessage(content) : null;
+  const forwardPayload = !deleted ? decodeForwardMessage(content) : null;
   const canEditMessage = !deleted && isOwner && !fileUrl && !payPayload && !pollPayload;
   const isPDF = fileType === "pdf" && !!fileUrl;
   const isGif = !!fileUrl && /\.gif(\?|$)/i.test(fileUrl);
   const isVideo = !!fileUrl && /\.(mp4|mov|webm|m4v)(\?|$)/i.test(fileUrl);
   const isImage = !isPDF && !isGif && !isVideo && !!fileUrl && /\.(png|jpe?g|webp|avif)(\?|$)/i.test(fileUrl);
   const isFile = !!fileUrl && !isPDF && !isGif && !isVideo && !isImage;
-  const attachmentCaption = fileUrl && content && content !== fileUrl && content !== "GIF" ? content : "";
+  const attachmentCaption = fileUrl && !forwardPayload && content && content !== fileUrl && content !== "GIF" ? content : "";
   const roleIcon = roleIconMap[member.role];
 
   return (
@@ -434,6 +480,19 @@ export const ChatItem = ({
               Pinned
             </div>
           )}
+          {forwardPayload && !isEditing && (
+            <div className="mt-2 max-w-2xl rounded-md border-l-4 border-indigo-400 bg-zinc-100/70 px-3 py-2 dark:bg-zinc-800/70">
+              <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase text-indigo-500 dark:text-indigo-300">
+                <Forward className="h-3.5 w-3.5" />
+                Forwarded from {forwardPayload.from}
+              </div>
+              {forwardPayload.content && forwardPayload.content !== fileUrl && (
+                <p className="break-words text-sm text-zinc-600 dark:text-zinc-300">
+                  {forwardPayload.content}
+                </p>
+              )}
+            </div>
+          )}
           {payPayload && !isEditing && (
             <ArcNestPayCard
               payload={payPayload}
@@ -467,7 +526,7 @@ export const ChatItem = ({
               </div>
             </div>
           )}
-          {!fileUrl && !payPayload && !pollPayload && !isEditing && (
+          {!fileUrl && !payPayload && !pollPayload && !forwardPayload && !isEditing && (
             <p className={cn(
               "text-sm text-zinc-600 dark:text-zinc-300",
               deleted && "italic text-zinc-500 dark:text-zinc-400 text-xs mt-1"
@@ -516,6 +575,23 @@ export const ChatItem = ({
       </div>
       {!deleted && (
         <div className="hidden group-hover:flex items-center gap-x-2 absolute p-1 -top-2 right-5 bg-white dark:bg-zinc-800 border rounded-sm">
+          {!sharingDisabled && (
+            <ActionTooltip label="Forward">
+              <Forward
+                onClick={() => onOpen("messageForward", {
+                  forwardMessage: {
+                    id,
+                    content,
+                    fileUrl,
+                    authorName: member.profile.name,
+                    sourceType: socketQuery.channelId ? "channel" : "conversation",
+                    sourceId: socketQuery.channelId || socketQuery.conversationId,
+                  },
+                })}
+                className="cursor-pointer ml-auto w-4 h-4 text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition"
+              />
+            </ActionTooltip>
+          )}
           {onReply && (
             <ActionTooltip label="Reply">
               <Reply
@@ -555,4 +631,6 @@ export const ChatItem = ({
       )}
     </div>
   )
-}
+});
+
+ChatItem.displayName = "ChatItem";

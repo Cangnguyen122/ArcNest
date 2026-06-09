@@ -1,7 +1,16 @@
 import { Channel, ChannelType, Server } from "@prisma/client";
 import { create } from "zustand";
 
-export type ModalType = "createServer" | "invite" | "editServer" | "members" | "createChannel" | "leaveServer" | "deleteServer" | "deleteChannel" | "editChannel" | "messageFile" | "messagePoll" | "deleteMessage";
+export type ModalType = "createServer" | "invite" | "editServer" | "members" | "createChannel" | "leaveServer" | "deleteServer" | "deleteChannel" | "editChannel" | "messageFile" | "messagePoll" | "messageForward" | "deleteMessage";
+
+type ForwardMessageData = {
+  id: string;
+  content: string;
+  fileUrl?: string | null;
+  authorName: string;
+  sourceType?: "channel" | "conversation";
+  sourceId?: string;
+};
 
 interface ModalData {
   server?: Server;
@@ -9,6 +18,7 @@ interface ModalData {
   channelType?: ChannelType;
   apiUrl?: string;
   query?: Record<string, any>;
+  forwardMessage?: ForwardMessageData;
 }
 
 interface ModalStore {

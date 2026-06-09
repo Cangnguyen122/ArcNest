@@ -13,6 +13,7 @@ import { DeleteChannelModal } from "@/components/modals/delete-channel-modal";
 import { EditChannelModal } from "@/components/modals/edit-channel-modal";
 import { MessageFileModal } from "@/components/modals/message-file-modal";
 import { MessagePollModal } from "@/components/modals/message-poll-modal";
+import { MessageForwardModal } from "@/components/modals/message-forward-modal";
 import { DeleteMessageModal } from "@/components/modals/delete-message-modal";
 
 export const ModalProvider = () => {
@@ -39,6 +40,7 @@ export const ModalProvider = () => {
       <EditChannelModal />
       <MessageFileModal />
       <MessagePollModal />
+      <MessageForwardModal />
       <DeleteMessageModal />
     </>
   )

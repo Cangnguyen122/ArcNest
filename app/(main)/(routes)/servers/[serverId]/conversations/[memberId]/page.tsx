@@ -74,6 +74,7 @@ const MemberIdPage = async ({
           apiUrl="/api/direct-messages"
           paramKey="conversationId"
           paramValue={conversation.id}
+          sharingDisabled={conversation.sharingDisabled}
         />
         {searchParams.video && (
           <MediaRoom
@@ -99,6 +100,7 @@ const MemberIdPage = async ({
               apiUrl="/api/direct-messages"
               paramKey="conversationId"
               paramValue={conversation.id}
+              sharingDisabled={conversation.sharingDisabled}
               socketUrl="/api/socket/direct-messages"
               socketQuery={{
                 conversationId: conversation.id,

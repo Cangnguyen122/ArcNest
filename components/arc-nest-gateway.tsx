@@ -4,7 +4,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { CircleDollarSign, ExternalLink, KeyRound, Loader2, Radio, ShieldCheck, Sparkles, Wallet, Zap } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount, useNetwork, usePublicClient, useSignMessage, useSwitchNetwork, useWalletClient } from "wagmi";
 
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,7 @@ export const ArcNestGateway = () => {
   const [isEntering, setIsEntering] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [error, setError] = useState("");
+  const enterAppStartedRef = useRef(false);
 
   const activeWallet = normalizeAddress(address);
   const sessionWallet = normalizeAddress(session?.wallet.address);
@@ -218,6 +219,11 @@ export const ArcNestGateway = () => {
   }, []);
 
   const enterApp = useCallback(async () => {
+    if (enterAppStartedRef.current) {
+      return;
+    }
+
+    enterAppStartedRef.current = true;
     setIsEntering(true);
     setError("");
 
@@ -232,8 +238,8 @@ export const ArcNestGateway = () => {
 
       const data = await response.json() as { serverId: string };
       router.replace(`/servers/${data.serverId}`);
-      router.refresh();
     } catch (error) {
+      enterAppStartedRef.current = false;
       console.log(error);
       setError(error instanceof Error ? error.message : "Could not open Arc House.");
     } finally {

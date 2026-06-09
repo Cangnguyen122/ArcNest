@@ -4,6 +4,7 @@ import * as z from "zod";
 import axios from "axios";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Copy, Loader2, Save, ShieldCheck, User, Wallet, XCircle } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -163,7 +164,15 @@ export const ProfileForm = ({ initialData }: ProfileFormProps) => {
               <div className="-mt-10 mb-5 flex items-end justify-between gap-3">
                 <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-[22px] border-4 border-[#0D111A] bg-[#5865F2] text-3xl font-black text-white shadow-[0_20px_52px_rgba(88,101,242,0.32)]">
                   {imageUrl ? (
-                    <img src={imageUrl} alt={nameValue} className="h-full w-full object-cover" />
+                    <div className="relative h-full w-full">
+                      <Image
+                        src={imageUrl}
+                        alt={nameValue}
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                      />
+                    </div>
                   ) : (
                     previewInitial
                   )}
